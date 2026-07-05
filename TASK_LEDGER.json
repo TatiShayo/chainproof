@@ -1,0 +1,36 @@
+{
+  "project": "chainproof",
+  "status": "INITIALIZED",
+  "current_phase": 2,
+  "phases": [
+    {
+      "phase": 1,
+      "name": "single-repo manual pipeline",
+      "status": "COMPLETED",
+      "description": "Using Syft, Grype, and cosign CLIs directly (no automation yet), walk ONE real repo through: generate SBOM -> scan for CVEs -> sign the release artifact with cosign using keyless OIDC signing -> attach the SBOM as a signed attestation. Document in RUNBOOK.md. Verify with cosign verify-attestation.",
+      "summary": "Phase 1 was successfully completed by running the manual supply chain security pipeline for the billflow repository. Using Syft, a CycloneDX JSON SBOM (sbom.json) was generated, which was then scanned for CVEs using Grype. Keyless OIDC signing via cosign was performed to sign the release artifact (billflow-release.zip) and attach the SBOM as a signed attestation. Both the artifact signature and SBOM attestation were successfully verified against the OIDC identity (tatibaraka@gmail.com / accounts.google.com), and the pipeline walkthrough was fully documented in RUNBOOK.md."
+    },
+    {
+      "phase": 2,
+      "name": "reusable workflow + rollout",
+      "status": "COMPLETED",
+      "description": "Convert Phase 1 runbook into a reusable GitHub Actions workflow file (.github/workflows/supply-chain.yml) triggered on release tag push. Integrate slsa-github-generator. Add to 3-4 real repos.",
+      "summary": "Phase 2 has been successfully completed. The manual supply chain security pipeline from Phase 1 was successfully converted into an automated GitHub Actions workflow file (`supply-chain.yml`) and rolled out to all four target repositories configured in `fleet.config.json` (`billflow`, `bookflow`, `privaforge`, and `solocrm`). The workflow is triggered automatically upon tag pushes matching the `v*` pattern, running checkout, installing pinned versions of Syft, Grype, and Cosign via commit SHAs, generating a CycloneDX SBOM, performing a vulnerability scan, creating a release zip archive, signing it keylessly, attaching the SBOM as a signed attestation, and finally generating and uploading SLSA Build Level 2 provenance using the pinned `slsa-github-generator` generic generator workflow."
+    },
+    {
+      "phase": 3,
+      "name": "fleet aggregator",
+      "status": "NOT_STARTED",
+      "description": "Build TypeScript CLI chainproof report --config fleet.config.json. Pull/verify SBOM attestation and provenance, parse Grype scan results, output combined report.",
+      "summary": ""
+    },
+    {
+      "phase": 4,
+      "name": "malicious-package cross-check",
+      "status": "NOT_STARTED",
+      "description": "Integrate Socket API/open feed behavioral signal. Flag dependencies with behavioral findings and no CVE.",
+      "summary": ""
+    }
+  ],
+  "cycles": []
+}
