@@ -1,0 +1,9 @@
+{
+  "schema": "hermes.tests.v4",
+  "run_id": "hermes-2026-07-25-chainproof",
+  "status": "pass",
+  "counts": {
+    "passed": 14,
+    "failed": 0
+  }
+}
