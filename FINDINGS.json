@@ -1,7 +1,10 @@
 {
-  "schema": "hermes.findings.v4",
-  "run_id": "hermes-2026-07-25-chainproof",
+  "schema": "hermes.findings.v6",
+  "run_id": "hermes-2026-07-27-v6-chainproof",
   "project": "chainproof",
-  "phase": "8.0",
+  "phase": "4.0",
+  "produced_at": "2026-07-27T22:09:41.699153",
+  "runner_tier": "T1",
+  "mode": "static-only",
   "findings": []
 }
