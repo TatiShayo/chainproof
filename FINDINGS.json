@@ -3,7 +3,7 @@
   "run_id": "hermes-2026-07-27-v6-chainproof",
   "project": "chainproof",
   "phase": "4.0",
-  "produced_at": "2026-07-27T22:36:13.083450",
+  "produced_at": "2026-07-27T23:17:31.367829",
   "runner_tier": "T1",
   "mode": "static-only",
   "findings": []
