@@ -1,19 +1,33 @@
 {
   "schema": "hermes.tests.v6",
-  "run_id": "hermes-2026-07-27-v6-chainproof",
+  "run_id": "hermes-2026-08-15-v6-chainproof",
   "project": "chainproof",
-  "produced_at": "2026-07-27T23:20:53.084106",
+  "produced_at": "2026-08-15T15:50:00.000Z",
   "summary": {
-    "status": "RUNNABLE",
-    "passed": 1,
+    "status": "PASS",
+    "total_suites": 15,
+    "total_tests": 164,
+    "passed": 164,
     "failed": 0,
     "skipped": 0,
     "unrunnable": 0
   },
   "suites": [
     {
-      "suite": "TypeScript Compilation",
-      "tool": "npx tsc --noEmit",
+      "suite": "TypeScript Typecheck",
+      "tool": "npm run typecheck",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "suite": "TypeScript Production Build",
+      "tool": "npm run build",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "suite": "Vitest Test Suite (15 suites, 164 unit/edge/security tests)",
+      "tool": "npm test",
       "status": "PASS",
       "exit_code": 0
     }

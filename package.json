@@ -1,10 +1,18 @@
 {
   "name": "chainproof",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Chainproof HERMES v6 — Supply Chain Security, SLSA Verification & Fleet Governance",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "chainproof": "./dist/cli/index.js"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "start": "ts-node src/cli/index.ts"
   },
   "keywords": [],
   "author": "",
@@ -15,6 +23,7 @@
   "devDependencies": {
     "@types/node": "^26.1.0",
     "ts-node": "^10.9.2",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
   }
 }
