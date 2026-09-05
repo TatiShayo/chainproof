@@ -1,7 +1,7 @@
-
 //! chainproof_lib — SLSA supply-chain attestation verification engine
 
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 
 // ─── SHA-256 inline (no external crypto crates required) ─────────────────────
 // Full FIPS-compliant SHA-256 implementation.
@@ -73,7 +73,7 @@ pub fn sha256_hex(data: &[u8]) -> String {
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SubjectDigest {
     pub name: String,
     #[serde(rename = "sha256")]
@@ -90,7 +90,7 @@ pub struct InTotoStatement {
     pub predicate: serde_json::Value,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum SlsaLevel {
     NotSlsa,
     Level1,
@@ -134,6 +134,8 @@ impl std::fmt::Display for VerifyError {
     }
 }
 
+impl std::error::Error for VerifyError {}
+
 // ─── Core Logic ──────────────────────────────────────────────────────────────
 
 pub fn parse_intoto_statement(json: &str) -> Result<InTotoStatement, serde_json::Error> {
@@ -163,10 +165,19 @@ pub fn verify_artifact(artifact_path: &str, statement_json: &str) -> Result<Veri
     if statement.subject.is_empty() {
         return Err(VerifyError::NoSubjects);
     }
-    let subject = &statement.subject[0];
+
+    let file_name = Path::new(artifact_path)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or(artifact_path);
+
+    // Match subject by basename or exact path, fallback to first subject
+    let subject = statement.subject.iter()
+        .find(|s| s.name == file_name || s.name == artifact_path)
+        .unwrap_or(&statement.subject[0]);
+
     let mut warnings = Vec::new();
 
-    // Try to read artifact from disk; if not found, note in warnings
     let digest_match = match std::fs::read(artifact_path) {
         Ok(data) => {
             let actual = sha256_hex(&data);
@@ -204,7 +215,6 @@ mod tests {
 
     #[test]
     fn test_sha256_hello() {
-        // SHA256("hello") = 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
         let hex = sha256_hex(b"hello");
         assert_eq!(hex, "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824");
     }
@@ -300,7 +310,6 @@ mod tests {
         f.write_all(b"supply chain test content").unwrap();
         let path = f.path().to_str().unwrap().to_string();
         let expected = sha256_hex(b"supply chain test content");
-        // Build statement with correct digest
         let json = format!(r#"{{
             "_type": "https://in-toto.io/Statement/v0.1",
             "subject": [{{"name": "test", "sha256": "{}"}}],
@@ -309,5 +318,20 @@ mod tests {
         }}"#, expected);
         let result = verify_artifact(&path, &json).unwrap();
         assert!(result.digest_match);
+    }
+
+    #[test]
+    fn test_multi_subject_selection_by_filename() {
+        let json = r#"{
+            "_type": "https://in-toto.io/Statement/v0.1",
+            "subject": [
+                {"name": "app.deb", "sha256": "1111111111111111111111111111111111111111111111111111111111111111"},
+                {"name": "app.tar.gz", "sha256": "2222222222222222222222222222222222222222222222222222222222222222"}
+            ],
+            "predicateType": "https://slsa.dev/provenance/v0.2",
+            "predicate": {}
+        }"#;
+        let res = verify_artifact("build/artifacts/app.tar.gz", json).unwrap();
+        assert_eq!(res.subject_name, "app.tar.gz");
     }
 }

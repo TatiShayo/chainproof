@@ -1,7 +1,6 @@
-
 //! chainproof CLI — SLSA attestation verifier
 use std::process;
-use chainproof_lib::{parse_intoto_statement, verify_artifact};
+use chainproof_lib::verify_artifact;
 
 fn usage() {
     eprintln!("chainproof v0.1.0 — SLSA Supply Chain Attestation Verifier");
