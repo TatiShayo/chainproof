@@ -29,3 +29,6 @@ $null
 .DS_Store
 Thumbs.db
 *.tsbuildinfo
+
+# Rust build artifacts
+target/
