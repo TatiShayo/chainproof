@@ -4,8 +4,12 @@ import * as path from 'path';
 /**
  * Sanitizes and resolves a file path, guarding against path traversal,
  * null byte injection, and directory breakout attacks.
+ *
+ * `allowedBaseDir` is REQUIRED: without it the function has no containment
+ * boundary to enforce and silently returns the resolved path — callers that
+ * omitted it were effectively unguarded.
  */
-export function sanitizePath(filePath: string, allowedBaseDir?: string): string {
+export function sanitizePath(filePath: string, allowedBaseDir: string): string {
   if (!filePath || typeof filePath !== 'string' || filePath.trim().length === 0) {
     throw new Error('Path must be a non-empty string');
   }
@@ -18,24 +22,23 @@ export function sanitizePath(filePath: string, allowedBaseDir?: string): string 
   // Normalize path
   const normalized = path.normalize(filePath.trim());
 
-  // If a base directory is specified, ensure normalized path is within it
-  if (allowedBaseDir) {
-    if (typeof allowedBaseDir !== 'string' || allowedBaseDir.includes('\0')) {
-      throw new Error('Invalid base directory: null byte or invalid type');
-    }
-
-    const resolvedBase = path.resolve(allowedBaseDir);
-    const resolvedTarget = path.resolve(resolvedBase, normalized);
-
-    // Ensure the target path starts with the base path
-    const relative = path.relative(resolvedBase, resolvedTarget);
-    if (relative.startsWith('..') || path.isAbsolute(relative)) {
-      throw new Error(`Path traversal violation: "${filePath}" escapes allowed directory "${allowedBaseDir}"`);
-    }
-    return resolvedTarget;
+  // The base directory is required — enforce containment against it.
+  if (typeof allowedBaseDir !== 'string' || allowedBaseDir.length === 0) {
+    throw new Error('sanitizePath: allowedBaseDir is required');
+  }
+  if (allowedBaseDir.includes('\0')) {
+    throw new Error('Invalid base directory: null byte detected');
   }
 
-  return path.resolve(normalized);
+  const resolvedBase = path.resolve(allowedBaseDir);
+  const resolvedTarget = path.resolve(resolvedBase, normalized);
+
+  // Ensure the target path stays inside the base path
+  const relative = path.relative(resolvedBase, resolvedTarget);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error(`Path traversal violation: "${filePath}" escapes allowed directory "${allowedBaseDir}"`);
+  }
+  return resolvedTarget;
 }
 
 /**

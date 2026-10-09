@@ -13,6 +13,21 @@ import { safeJsonParse } from '../utils/json.js';
 
 export const program = new Command();
 
+/** Commander collect helper for repeatable options. */
+function collect(value: string, previous: string[]): string[] {
+  return previous.concat([value]);
+}
+
+/** Reads a PEM file, containment-checked against the given base. */
+function readPem(pemPath: string, baseDir: string, label: string): string {
+  const safePath = sanitizePath(pemPath, baseDir);
+  if (!fs.existsSync(safePath)) {
+    console.error(`[ERROR] ${label} file not found: ${safePath}`);
+    process.exit(2);
+  }
+  return fs.readFileSync(safePath, 'utf8');
+}
+
 program
   .name('chainproof')
   .description('Chainproof HERMES v6 — Supply Chain Security, SLSA Verification & Fleet Governance')
@@ -30,13 +45,17 @@ program
   .option('--policy <path>', 'Path to custom policy JSON configuration')
   .option('--slsa-level <level>', 'Required SLSA level (1, 2, or 3)', '1')
   .option('--max-cve-severity <severity>', 'Max allowed CVE severity (CRITICAL, HIGH, MEDIUM, LOW, NONE)', 'CRITICAL')
+  .option('--trusted-key <pemFile>', 'Trusted public key (PEM) for DSSE signature verification; repeatable', collect, [])
+  .option('--trusted-root <pemFile>', 'Trusted root certificate (PEM) for Sigstore bundle chains; repeatable', collect, [])
+  .option('--expected-signer <identity>', 'Expected signer identity (certificate SAN email/URI)')
   .option('--json', 'Output results in JSON format', false)
   .action((artifact, options) => {
     try {
+      const baseDir = process.cwd();
       let policy: PolicyConfig = { ...PRESET_POLICIES.default };
 
       if (options.policy) {
-        const safePolicyPath = sanitizePath(options.policy);
+        const safePolicyPath = sanitizePath(options.policy, baseDir);
         if (!fs.existsSync(safePolicyPath)) {
           console.error(`[ERROR] Policy file not found: ${safePolicyPath}`);
           process.exit(2);
@@ -60,13 +79,24 @@ program
         policy.maxAllowedCveSeverity = options.maxCveSeverity.toUpperCase() as SeverityLevel | 'NONE';
       }
 
+      const trustedPublicKeys = (options.trustedKey || []).map((p: string) =>
+        readPem(p, baseDir, 'Trusted key')
+      );
+      const trustedRoots = (options.trustedRoot || []).map((p: string) =>
+        readPem(p, baseDir, 'Trusted root')
+      );
+
       const result = ChainproofVerifier.verify({
         artifactPath: artifact,
         sbomPath: options.sbom,
         attestationPath: options.attestation,
         provenancePath: options.provenance,
         cveScanPath: options.cveScan,
-        policy
+        policy,
+        baseDir,
+        trustedPublicKeys: trustedPublicKeys.length > 0 ? trustedPublicKeys : undefined,
+        trustedRoots: trustedRoots.length > 0 ? trustedRoots : undefined,
+        expectedSignerIdentity: options.expectedSigner
       });
 
       if (options.json) {
@@ -126,7 +156,8 @@ program
   .option('--json', 'Output results in JSON format', false)
   .action((options) => {
     try {
-      const configPath = sanitizePath(options.config);
+      const baseDir = process.cwd();
+      const configPath = sanitizePath(options.config, baseDir);
       if (!fs.existsSync(configPath)) {
         console.error(`[ERROR] Fleet config not found at: ${configPath}`);
         process.exit(2);
@@ -134,7 +165,7 @@ program
 
       let policy: PolicyConfig | undefined;
       if (options.policy) {
-        const safePolicyPath = sanitizePath(options.policy);
+        const safePolicyPath = sanitizePath(options.policy, baseDir);
         const parsed = safeJsonParse<PolicyConfig>(fs.readFileSync(safePolicyPath, 'utf8'));
         if (!parsed.success || !parsed.data) {
           console.error(`[ERROR] Invalid policy JSON: ${parsed.error}`);
@@ -146,7 +177,7 @@ program
       const summary = FleetAggregator.evaluateFleet(configPath, policy);
 
       if (options.output) {
-        const safeOutPath = sanitizePath(options.output);
+        const safeOutPath = sanitizePath(options.output, baseDir);
         const md = FleetAggregator.generateMarkdownReport(summary);
         fs.writeFileSync(safeOutPath, md, 'utf8');
         console.log(`[OK] Fleet report saved to ${safeOutPath}`);
@@ -173,7 +204,7 @@ program
   .option('--json', 'Output raw parsed components as JSON', false)
   .action((sbomFile, options) => {
     try {
-      const safePath = sanitizePath(sbomFile);
+      const safePath = sanitizePath(sbomFile, process.cwd());
       if (!fs.existsSync(safePath)) {
         console.error(`[ERROR] File not found: ${safePath}`);
         process.exit(2);
@@ -209,7 +240,7 @@ program
   .option('--json', 'Output evaluation as JSON', false)
   .action((provFile, options) => {
     try {
-      const safePath = sanitizePath(provFile);
+      const safePath = sanitizePath(provFile, process.cwd());
       if (!fs.existsSync(safePath)) {
         console.error(`[ERROR] File not found: ${safePath}`);
         process.exit(2);

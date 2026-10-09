@@ -46,7 +46,7 @@ export function runCommand(commandLine: string, cwd: string): Promise<string> {
 }
 
 export async function generateFleetArtifacts(configPath: string = defaultConfigPath): Promise<void> {
-  const safeConfigPath = sanitizePath(configPath);
+  const safeConfigPath = sanitizePath(configPath, process.cwd());
   if (!fs.existsSync(safeConfigPath)) {
     console.error(`Config file not found at ${safeConfigPath}`);
     process.exit(2);
@@ -71,7 +71,10 @@ export async function generateFleetArtifacts(configPath: string = defaultConfigP
       continue;
     }
 
-    const safeRepoPath = sanitizePath(repoPath);
+    // Repository paths are contained to the directory the fleet config lives
+    // in (the workspace root): siblings are legitimate, escaping above the
+    // config is not.
+    const safeRepoPath = sanitizePath(repoPath, path.dirname(safeConfigPath));
     const zipPath = path.join(safeRepoPath, 'release.zip');
     const sbomPath = path.join(safeRepoPath, 'sbom.json');
     const cvePath = path.join(safeRepoPath, 'cve-scan.txt');

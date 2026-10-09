@@ -14,7 +14,9 @@ export class FleetAggregator {
     let config: FleetConfig;
 
     if (typeof configPathOrObj === 'string') {
-      const safeConfigPath = sanitizePath(configPathOrObj);
+      // Containment base: the process CWD. Callers that already sanitized the
+      // path (the CLI) simply re-affirm it here.
+      const safeConfigPath = sanitizePath(configPathOrObj, process.cwd());
       if (!fs.existsSync(safeConfigPath)) {
         throw new Error(`Fleet config not found at: ${safeConfigPath}`);
       }

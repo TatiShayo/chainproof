@@ -14,16 +14,23 @@ import {
 describe('Security Utilities', () => {
   describe('sanitizePath', () => {
     it('should resolve normal valid paths', () => {
-      const p = sanitizePath('fleet.config.json');
+      const p = sanitizePath('fleet.config.json', process.cwd());
       expect(p).toBe(path.resolve('fleet.config.json'));
     });
 
     it('should reject null byte injection attempts', () => {
-      expect(() => sanitizePath('release.zip\0.txt')).toThrow(/null byte detected/i);
+      expect(() => sanitizePath('release.zip\0.txt', process.cwd())).toThrow(/null byte detected/i);
     });
 
     it('should reject empty path input', () => {
-      expect(() => sanitizePath('')).toThrow(/non-empty string/i);
+      expect(() => sanitizePath('', process.cwd())).toThrow(/non-empty string/i);
+    });
+
+    it('should refuse to run without a base directory', () => {
+      // The containment boundary is mandatory: an unchecked path is the bug
+      // this hardening pass closed.
+      expect(() => (sanitizePath as any)('fleet.config.json')).toThrow(/allowedBaseDir is required/i);
+      expect(() => sanitizePath('fleet.config.json', '')).toThrow(/allowedBaseDir is required/i);
     });
 
     it('should enforce allowedBaseDir boundary on relative traversal', () => {
