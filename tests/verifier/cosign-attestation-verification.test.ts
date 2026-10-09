@@ -22,11 +22,11 @@ describe("Chainproof Cosign & SLSA In-Toto Verification", () => {
       predicate: {},
     };
 
-    const isMatch = verifySubjectDigest(statement as any, sha);
-    expect(isMatch).toBe(true);
+    const isMatch = verifySubjectDigest(statement as any, "release.tar.gz", sha);
+    expect(isMatch.match).toBe(true);
 
-    const isMismatched = verifySubjectDigest(statement as any, "0000000000000000000000000000000000000000000000000000000000000000");
-    expect(isMismatched).toBe(false);
+    const isMismatched = verifySubjectDigest(statement as any, "release.tar.gz", "0000000000000000000000000000000000000000000000000000000000000000");
+    expect(isMismatched.match).toBe(false);
   });
 
   it("evaluates SLSA level based on builder and source requirements", () => {
@@ -36,8 +36,8 @@ describe("Chainproof Cosign & SLSA In-Toto Verification", () => {
       invocation: { configSource: { uri: "git+https://github.com/org/repo" } },
     };
 
-    const level = evaluateSLSALevel(minimalProvenance as any);
-    expect(level).toBeGreaterThanOrEqual(1);
+    const evaluation = evaluateSLSALevel(minimalProvenance as any);
+    expect(evaluation.level).toBeGreaterThanOrEqual(1);
   });
 
   it("prevents path traversal escapes when resolving artifacts", () => {

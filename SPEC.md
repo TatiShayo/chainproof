@@ -11,7 +11,7 @@ A CLI and automated GitHub Action that inspects Cosign attestations and in-toto 
 2. As an auditor, I want an immutable record of every package's build provenance, so that compliance audits pass instantly.
 
 ## Implementation Decisions
-- In-toto statement parser in `src/verifier/statement.ts`.
+- In-toto statement parser in `src/attestation/intoto.ts`.
 - Cosign signature checker in `src/verifier/cosign.ts`.
 
 ## Testing Decisions
