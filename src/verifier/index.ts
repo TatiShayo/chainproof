@@ -7,6 +7,7 @@ import { parseSBOM, verifySBOMIntegrity } from '../sbom/index.js';
 import { parseGrypeOutput } from '../vulnerability/matcher.js';
 import { PolicyEngine, PRESET_POLICIES } from '../policy/engine.js';
 import { evaluateSLSALevel } from '../provenance/slsa.js';
+import { verifyAttestationSignature } from './cosign.js';
 
 export class ChainproofVerifier {
   /**
@@ -14,7 +15,9 @@ export class ChainproofVerifier {
    */
   public static verify(options: VerificationOptions): VerificationResult {
     const errors: string[] = [];
-    const baseDir = options.baseDir;
+    // Containment base for every path input. Defaults to the process CWD so
+    // sanitizePath always has a boundary to enforce (it is mandatory now).
+    const baseDir = options.baseDir || process.cwd();
 
     // 1. Sanitize and resolve artifact path
     let safeArtifactPath: string;
@@ -80,13 +83,27 @@ export class ChainproofVerifier {
           const attContent = fs.readFileSync(safeAttPath);
           attestationStatement = extractAttestationStatement(attContent);
 
-          // Verify subject digest against artifact
+          // Verify subject digest against artifact. This proves the statement
+          // DESCRIBES this artifact — nothing more. It is not a signature.
           const digestMatch = verifySubjectDigest(attestationStatement, path.basename(safeArtifactPath), artifactSha256);
           if (digestMatch.match) {
             attestationVerified = true;
-            signatureVerified = true;
           } else {
             errors.push(`Attestation subject mismatch: ${digestMatch.error}`);
+          }
+
+          // Cryptographic signature verification runs independently, against
+          // the DSSE envelope (or the bundle's leaf certificate). A digest
+          // match never sets signatureVerified — self-authored JSON used to
+          // sail through here.
+          const sigResult = verifyAttestationSignature(attContent, {
+            trustedPublicKeys: options.trustedPublicKeys,
+            trustedRoots: options.trustedRoots,
+            expectedIdentity: options.expectedSignerIdentity,
+          });
+          signatureVerified = sigResult.verified;
+          if (!sigResult.verified) {
+            errors.push(`Attestation signature not verified: ${sigResult.error}`);
           }
         } else {
           errors.push(`Attestation file not found at ${safeAttPath}`);

@@ -254,6 +254,12 @@ export interface VerificationOptions {
   cveScanPath?: string;
   policy?: PolicyConfig;
   baseDir?: string;
+  /** PEM-encoded trusted public keys for DSSE signature verification. */
+  trustedPublicKeys?: string[];
+  /** PEM-encoded trusted root certificates for Sigstore bundle chains. */
+  trustedRoots?: string[];
+  /** Expected signer identity (certificate SAN email/URI). */
+  expectedSignerIdentity?: string;
 }
 
 export interface VerificationResult {

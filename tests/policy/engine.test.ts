@@ -250,13 +250,20 @@ describe('Policy Engine Rules & Compliance Profiles', () => {
       expect(res.failures.some(f => f.includes('Cryptographic signature is required'))).toBe(true);
     });
 
-    it('should pass requireSignature when attestation or signature is present', () => {
+    it('should pass requireSignature only when a verified signature is present', () => {
       const engine = new PolicyEngine({
         requireSignature: true
       });
 
-      const res = engine.evaluate({ attestationPresent: true });
-      expect(res.passed).toBe(true);
+      // A parsed attestation is NOT a verified signature: a digest match
+      // proves the statement describes the artifact, not that the signing
+      // key approved it. Self-authored attestation JSON must not pass here.
+      const attestationOnly = engine.evaluate({ attestationPresent: true });
+      expect(attestationOnly.passed).toBe(false);
+      expect(attestationOnly.failures.some(f => f.includes('Cryptographic signature is required'))).toBe(true);
+
+      const verifiedSignature = engine.evaluate({ signaturePresent: true, attestationPresent: true });
+      expect(verifiedSignature.passed).toBe(true);
     });
   });
 

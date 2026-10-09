@@ -149,8 +149,13 @@ export class PolicyEngine {
 
     // 2. Check Signature Requirement
     if (this.config.requireSignature) {
-      if (context.signaturePresent || context.attestationPresent) {
-        rules.push({ rule: 'require-signature', status: 'PASS', message: 'Cryptographic signature / attestation verified' });
+      // Only a CRYPTOGRAPHICALLY VERIFIED signature satisfies this rule.
+      // attestationPresent merely means a statement was parsed — a digest
+      // match proves the statement describes the artifact, not that anyone
+      // with the signing key approved it. Self-authored attestation JSON used
+      // to pass here.
+      if (context.signaturePresent) {
+        rules.push({ rule: 'require-signature', status: 'PASS', message: 'Cryptographic signature verified' });
       } else {
         const msg = 'Cryptographic signature is required by policy but was not verified or missing';
         rules.push({ rule: 'require-signature', status: 'FAIL', message: msg });
